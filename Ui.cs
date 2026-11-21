@@ -22,7 +22,7 @@ static class Theme
 static class Ui
 {
     /// <summary>Общий масштаб интерфейса (1.0 = исходный размер, 1.5 = +50%).</summary>
-    public const float Zoom = 1.5f;
+    public const float Zoom = 1.0f;
 
     public static int Z(int v) => (int)Math.Round(v * Zoom);
     public static Font Fnt(string name, float pt, FontStyle style = FontStyle.Regular) => new(name, pt * Zoom, style);
