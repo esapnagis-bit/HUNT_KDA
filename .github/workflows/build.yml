@@ -1,0 +1,36 @@
+name: Build Windows exe
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+    tags: [ 'v*' ]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Publish
+        run: dotnet publish HuntKdaCalculator.csproj -c Release -o dist
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: HuntKdaCalculator-win-x64
+          path: dist/HuntKdaCalculator.exe
+          if-no-files-found: error
+
+      - name: Attach to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/HuntKdaCalculator.exe
