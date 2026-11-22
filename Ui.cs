@@ -24,6 +24,9 @@ static class Ui
     /// <summary>Общий масштаб интерфейса (1.0 = исходный размер, 1.5 = +50%).</summary>
     public const float Zoom = 1.0f;
 
+    /// <summary>Ширина содержимого карточки (в «исходных» пикселях).</summary>
+    public const int W = 320;
+
     public static int Z(int v) => (int)Math.Round(v * Zoom);
     public static Font Fnt(string name, float pt, FontStyle style = FontStyle.Regular) => new(name, pt * Zoom, style);
 
@@ -32,7 +35,7 @@ static class Ui
 
     public static Panel Sep() => new()
     {
-        Size = new Size(Z(288), 1),
+        Size = new Size(Z(W), 1),
         BackColor = Theme.Border,
         Margin = new Padding(0, Z(10), 0, Z(10))
     };
@@ -95,11 +98,11 @@ sealed class CardPanel : FlowLayoutPanel
     }
 }
 
-/// <summary>Таблица результатов: цель | +N | → точное значение. Размеры привязаны к Height/Width (DPI-безопасно).</summary>
+/// <summary>Таблица результатов: цель слева, сколько нужно справа. Размеры привязаны к Height/Width (DPI-безопасно).</summary>
 sealed class RowsControl : Control
 {
     readonly int _capacity;
-    readonly List<(string A, string B, string C)> _rows = new();
+    readonly List<(string A, string B)> _rows = new();
     string? _note;
     Color _accent = Theme.Up;
 
@@ -112,11 +115,11 @@ sealed class RowsControl : Control
         SetStyle(ControlStyles.SupportsTransparentBackColor | ControlStyles.UserPaint |
                  ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
         BackColor = Color.Transparent;
-        Size = new Size(Ui.Z(288), Ui.Z(26) * capacity);
+        Size = new Size(Ui.Z(Ui.W), Ui.Z(26) * capacity);
         Margin = new Padding(0);
     }
 
-    public void Set(string? note, IEnumerable<(string, string, string)> rows, Color accent)
+    public void Set(string? note, IEnumerable<(string, string)> rows, Color accent)
     {
         _note = note;
         _accent = accent;
@@ -129,7 +132,7 @@ sealed class RowsControl : Control
     {
         var f = TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix | TextFormatFlags.VerticalCenter;
         int rowH = Height / _capacity;
-        int wA = (int)(Width * 0.22), wB = (int)(Width * 0.36), wC = Width - wA - wB;
+        int wA = Width / 2, wB = Width - wA;
 
         if (_note != null)
         {
@@ -139,11 +142,22 @@ sealed class RowsControl : Control
         for (int i = 0; i < _rows.Count; i++)
         {
             int y = i * rowH;
-            var (a, b, c) = _rows[i];
+            var (a, b) = _rows[i];
             TextRenderer.DrawText(e.Graphics, a, Big, new Rectangle(0, y, wA, rowH), Theme.Fg, f | TextFormatFlags.Left);
-            TextRenderer.DrawText(e.Graphics, b, Big, new Rectangle(wA, y, wB, rowH), _accent, f | TextFormatFlags.HorizontalCenter);
-            TextRenderer.DrawText(e.Graphics, c, Small, new Rectangle(wA + wB, y, wC, rowH), Theme.Muted, f | TextFormatFlags.Right);
+            TextRenderer.DrawText(e.Graphics, b, Big, new Rectangle(wA, y, wB, rowH), _accent, f | TextFormatFlags.Right);
         }
+    }
+}
+
+/// <summary>Невидимая «заглушка» фокуса: на неё встаёт фокус при показе окна, чтобы ни одно поле не подсвечивалось.</summary>
+sealed class FocusSink : Control
+{
+    public FocusSink()
+    {
+        SetStyle(ControlStyles.Selectable, true);
+        TabStop = false;
+        Size = new Size(1, 1);
+        Location = Point.Empty;
     }
 }
 

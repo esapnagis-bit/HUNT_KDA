@@ -20,23 +20,23 @@ sealed class StatField : Panel
 
     public StatField(string caption)
     {
-        Size = new Size(Z(288), Z(52));
+        Size = new Size(Z(W), Z(52));
         Margin = new Padding(0, 0, 0, Z(8));
         DoubleBuffered = true;
 
         _caption.Text = Sp(caption.ToUpperInvariant());
         _caption.Location = new Point(0, 0);
-        _caption.Size = new Size(Z(70), Z(52));
+        _caption.Size = new Size(Z(100), Z(52));
         _caption.TextAlign = ContentAlignment.MiddleLeft;
         _caption.ForeColor = Theme.Muted;
         _caption.BackColor = Color.Transparent;
         _caption.Font = Fnt("Georgia", 8.5f);
         Controls.Add(_caption);
-        Controls.Add(MakeButton("−", Z(76), -1));
-        Controls.Add(MakeButton("+", Z(240), +1));
+        Controls.Add(MakeButton("−", Z(106), -1));
+        Controls.Add(MakeButton("+", Z(W - 48), +1));
 
-        _wrap.Location = new Point(Z(130), Z(2));
-        _wrap.Size = new Size(Z(104), Z(48));
+        _wrap.Location = new Point(Z(160), Z(2));
+        _wrap.Size = new Size(Z(W - 214), Z(48));
         _wrap.BackColor = Theme.Field;
         _wrap.Paint += (_, e) =>
         {
@@ -52,7 +52,7 @@ sealed class StatField : Panel
         _box.TextAlign = HorizontalAlignment.Center;
         _box.MaxLength = 6;
         _box.Text = "0";
-        _box.Width = Z(96);
+        _box.Width = Z(W - 214 - 8);
         _box.Location = new Point(Z(4), (Z(48) - _box.Height) / 2);
         _wrap.Controls.Add(_box);
         Controls.Add(_wrap);

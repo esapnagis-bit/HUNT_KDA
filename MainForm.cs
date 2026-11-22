@@ -10,7 +10,8 @@ sealed class MainForm : Form
     readonly StatField _k = new("Kills"), _d = new("Deaths"), _a = new("Assists");
     readonly CardPanel _card = new();
     readonly Panel _kdaHost = new();
-    readonly Label _kda = new(), _kdaSub = new(), _upHead = new(), _downHead = new();
+    readonly Label _kda = new(), _upHead = new(), _downHead = new();
+    readonly FocusSink _sink = new();
     readonly RowsControl _up = new(3), _down = new(1);
     readonly Panel _sepC = Sep(), _sepD = Sep();
 
@@ -51,7 +52,7 @@ sealed class MainForm : Form
         AutoSizeMode = AutoSizeMode.GrowAndShrink;
 
         // шапка: эмблема + название
-        var brand = new Panel { Size = new Size(Z(288), Z(50)), BackColor = Color.Transparent, Margin = new Padding(0) };
+        var brand = new Panel { Size = new Size(Z(W), Z(50)), BackColor = Color.Transparent, Margin = new Padding(0) };
         var crest = new PictureBox
         {
             Image = emblem, SizeMode = PictureBoxSizeMode.Zoom,
@@ -64,22 +65,19 @@ sealed class MainForm : Form
         };
         brand.Controls.AddRange(new Control[] { crest, title });
         int tw = TextRenderer.MeasureText(title.Text, title.Font).Width;
-        int x0 = Math.Max(0, (Z(288) - (Z(46) + Z(14) + tw)) / 2);
+        int x0 = Math.Max(0, (Z(W) - (Z(46) + Z(14) + tw)) / 2);
         crest.Location = new Point(x0, Z(2));
         title.Location = new Point(x0 + Z(60), (Z(50) - title.PreferredHeight) / 2);
 
         // блок KDA
-        _kdaHost.Size = new Size(Z(288), Z(126));
+        _kdaHost.Size = new Size(Z(W), Z(106));
         _kdaHost.BackColor = Color.Transparent;
         _kdaHost.Margin = new Padding(0);
-        _kdaHost.Controls.Add(Lbl(Sp("KDA В ИГРЕ"), Fnt("Georgia", 8f), Theme.Muted, new Size(Z(288), Z(18)), ContentAlignment.MiddleCenter, new Point(0, 0)));
+        _kdaHost.Controls.Add(Lbl(Sp("KDA В ИГРЕ"), Fnt("Georgia", 8f), Theme.Muted, new Size(Z(W), Z(18)), ContentAlignment.MiddleCenter, new Point(0, 0)));
         _kda.Font = Fnt("Georgia", 40f); _kda.ForeColor = Theme.Bone;
         _kda.BackColor = Color.Transparent; _kda.AutoSize = false;
-        _kda.Size = new Size(Z(288), Z(82)); _kda.Location = new Point(0, Z(16)); _kda.TextAlign = ContentAlignment.MiddleCenter;
-        _kdaSub.Font = Fnt("Consolas", 10f); _kdaSub.ForeColor = Theme.Muted;
-        _kdaSub.BackColor = Color.Transparent; _kdaSub.AutoSize = false;
-        _kdaSub.Size = new Size(Z(288), Z(22)); _kdaSub.Location = new Point(0, Z(98)); _kdaSub.TextAlign = ContentAlignment.MiddleCenter;
-        _kdaHost.Controls.AddRange(new Control[] { _kda, _kdaSub });
+        _kda.Size = new Size(Z(W), Z(82)); _kda.Location = new Point(0, Z(18)); _kda.TextAlign = ContentAlignment.MiddleCenter;
+        _kdaHost.Controls.Add(_kda);
 
         // заголовки секций
         Setup(_upHead, Sp("РОСТ · УБИЙСТВ НУЖНО"));
@@ -94,6 +92,8 @@ sealed class MainForm : Form
         _card.WatermarkHost = _kdaHost;
         _card.Location = Point.Empty;
         Controls.Add(_card);
+        Controls.Add(_sink);          // позади карточки; принимает начальный фокус
+        ActiveControl = _sink;
         HookClicks(_card);
 
         // загрузка сохранённых значений (события ещё не подписаны)
@@ -111,7 +111,7 @@ sealed class MainForm : Form
     static void Setup(Label l, string text)
     {
         l.Text = text; l.Font = Fnt("Georgia", 8f); l.ForeColor = Theme.Muted; l.BackColor = Color.Transparent;
-        l.AutoSize = false; l.Size = new Size(Z(288), Z(20)); l.TextAlign = ContentAlignment.MiddleLeft;
+        l.AutoSize = false; l.Size = new Size(Z(W), Z(20)); l.TextAlign = ContentAlignment.MiddleLeft;
         l.Margin = new Padding(0, 0, 0, Z(2));
     }
 
@@ -180,23 +180,21 @@ sealed class MainForm : Form
         if (r.Infinite)
         {
             _kda.Text = "∞";
-            _kdaSub.Text = "0 смертей";
         }
         else
         {
             _kda.Text = KdaCalc.Fmt2(r.Display100);
-            _kdaSub.Text = $"({r.Exact})";
 
             _up.Set(null,
-                r.Up.Select(u => (KdaCalc.Fmt2(u.Target100), "+" + u.Kills + " K", "→ " + u.Exact)),
+                r.Up.Select(u => (KdaCalc.Fmt2(u.Target100), "+" + u.Kills + " K")),
                 Theme.Up);
 
             if (r.DownTarget100 is long t)
                 _down.Set(null,
-                    new[] { (KdaCalc.Fmt2(t), "+" + r.DownDeaths + " D", "→ " + r.DownExact) },
+                    new[] { (KdaCalc.Fmt2(t), "+" + r.DownDeaths + " D") },
                     Theme.Down);
             else
-                _down.Set("Недоступно: KDA уже 0.00", Array.Empty<(string, string, string)>(), Theme.Down);
+                _down.Set("Недоступно: KDA уже 0.00", Array.Empty<(string, string)>(), Theme.Down);
         }
         _card.Invalidate();
     }
@@ -207,13 +205,18 @@ sealed class MainForm : Form
 
     public void HideToTray()
     {
+        ActiveControl = _sink;   // сбрасываем фокус с полей ввода
         SaveNow();
         Hide();
     }
 
     public void ShowAndFocus()
     {
-        if (!Visible) Show();
+        if (!Visible)
+        {
+            ActiveControl = _sink; // при показе ни одно поле не должно быть выделено
+            Show();
+        }
         if (WindowState == FormWindowState.Minimized) WindowState = FormWindowState.Normal;
         Activate();
         BringToFront();
@@ -246,6 +249,7 @@ sealed class MainForm : Form
         if (e.CloseReason == CloseReason.UserClosing)
         {
             e.Cancel = true; // закрытие только прячет окно в трей
+            ActiveControl = _sink;
             Hide();
         }
         base.OnFormClosing(e);
